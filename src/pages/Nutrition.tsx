@@ -1,45 +1,132 @@
 import { useState } from "react";
-import { Plus, Search, ChevronRight, Apple, Coffee, Sandwich, Pizza } from "lucide-react";
+import { Plus, Search, ChevronRight, Coffee, Sandwich, Pizza, Apple } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { CalorieRing } from "@/components/CalorieRing";
 import { BottomNav } from "@/components/BottomNav";
+import { FoodSearchModal } from "@/components/FoodSearchModal";
+import { useToast } from "@/hooks/use-toast";
 
-const meals = [
-  {
-    name: "Breakfast",
-    icon: Coffee,
-    time: "7:30 AM",
-    calories: 420,
-    items: ["Oatmeal with berries", "2 eggs scrambled"],
-  },
-  {
-    name: "Lunch",
-    icon: Sandwich,
-    time: "12:30 PM",
-    calories: 650,
-    items: ["Grilled chicken salad", "Whole grain bread"],
-  },
-  {
-    name: "Snack",
-    icon: Apple,
-    time: "3:00 PM",
-    calories: 180,
-    items: ["Greek yogurt", "Almonds"],
-  },
-];
+interface MealEntry {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servings: number;
+}
 
-const macros = {
-  protein: { current: 145, target: 180 },
-  carbs: { current: 180, target: 250 },
-  fat: { current: 55, target: 70 },
-};
+interface Meal {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  time: string;
+  entries: MealEntry[];
+}
 
 const Nutrition = () => {
-  const caloriesConsumed = 1650;
+  const [showFoodSearch, setShowFoodSearch] = useState(false);
+  const [activeMealIndex, setActiveMealIndex] = useState<number | null>(null);
+  const { toast } = useToast();
+
+  const [meals, setMeals] = useState<Meal[]>([
+    {
+      name: "Breakfast",
+      icon: Coffee,
+      time: "7:30 AM",
+      entries: [
+        { id: "1", name: "Oatmeal", calories: 71, protein: 2.5, carbs: 12, fat: 1.5, servings: 2 },
+        { id: "2", name: "Eggs", calories: 144, protein: 12.6, carbs: 0.8, fat: 9.6, servings: 2 },
+      ],
+    },
+    {
+      name: "Lunch",
+      icon: Sandwich,
+      time: "12:30 PM",
+      entries: [
+        { id: "3", name: "Chicken Breast", calories: 330, protein: 62, carbs: 0, fat: 7.2, servings: 2 },
+        { id: "4", name: "Brown Rice", calories: 246, protein: 5.4, carbs: 51.2, fat: 2, servings: 2 },
+      ],
+    },
+    {
+      name: "Snack",
+      icon: Apple,
+      time: "3:00 PM",
+      entries: [
+        { id: "5", name: "Greek Yogurt", calories: 59, protein: 10.2, carbs: 3.6, fat: 0.7, servings: 1 },
+        { id: "6", name: "Almonds", calories: 164, protein: 6, carbs: 6, fat: 14, servings: 1 },
+      ],
+    },
+    {
+      name: "Dinner",
+      icon: Pizza,
+      time: "7:00 PM",
+      entries: [],
+    },
+  ]);
+
+  // Calculate totals
+  const totals = meals.reduce(
+    (acc, meal) => {
+      meal.entries.forEach((entry) => {
+        acc.calories += entry.calories;
+        acc.protein += entry.protein;
+        acc.carbs += entry.carbs;
+        acc.fat += entry.fat;
+      });
+      return acc;
+    },
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+
   const caloriesTarget = 2200;
+  const macros = {
+    protein: { current: Math.round(totals.protein), target: 180 },
+    carbs: { current: Math.round(totals.carbs), target: 250 },
+    fat: { current: Math.round(totals.fat), target: 70 },
+  };
+
+  const handleAddToMeal = (mealIndex: number) => {
+    setActiveMealIndex(mealIndex);
+    setShowFoodSearch(true);
+  };
+
+  const handleFoodSelect = (
+    food: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number },
+    servings: number
+  ) => {
+    if (activeMealIndex === null) return;
+
+    const newEntry: MealEntry = {
+      id: `${Date.now()}`,
+      name: food.name,
+      calories: Math.round(food.calories * servings),
+      protein: Number(food.protein) * servings,
+      carbs: Number(food.carbs) * servings,
+      fat: Number(food.fat) * servings,
+      servings,
+    };
+
+    setMeals((prev) =>
+      prev.map((meal, i) =>
+        i === activeMealIndex
+          ? { ...meal, entries: [...meal.entries, newEntry] }
+          : meal
+      )
+    );
+
+    toast({
+      title: "Food added",
+      description: `${food.name} added to ${meals[activeMealIndex].name}`,
+    });
+
+    setActiveMealIndex(null);
+  };
+
+  const getMealCalories = (meal: Meal) => {
+    return meal.entries.reduce((sum, entry) => sum + entry.calories, 0);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -56,14 +143,14 @@ const Nutrition = () => {
         <Card variant="glass">
           <CardContent className="p-5">
             <div className="flex items-center gap-6">
-              <CalorieRing consumed={caloriesConsumed} target={caloriesTarget} size="sm" />
+              <CalorieRing consumed={Math.round(totals.calories)} target={caloriesTarget} size="sm" />
               <div className="flex-1 space-y-3">
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="text-muted-foreground">Consumed</span>
-                    <span className="font-semibold text-foreground">{caloriesConsumed}</span>
+                    <span className="font-semibold text-foreground">{Math.round(totals.calories)}</span>
                   </div>
-                  <Progress value={(caloriesConsumed / caloriesTarget) * 100} variant="lime" />
+                  <Progress value={(totals.calories / caloriesTarget) * 100} variant="lime" />
                 </div>
                 <div className="flex items-center justify-between text-sm pt-1 border-t border-border/50">
                   <span className="text-muted-foreground">Target</span>
@@ -88,9 +175,9 @@ const Nutrition = () => {
                     {current}g / {target}g
                   </span>
                 </div>
-                <Progress 
-                  value={(current / target) * 100} 
-                  variant={current >= target ? "success" : "default"} 
+                <Progress
+                  value={(current / target) * 100}
+                  variant={current >= target ? "success" : "default"}
                   className="h-2"
                 />
               </div>
@@ -102,64 +189,95 @@ const Nutrition = () => {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-foreground">Today's Meals</h2>
-            <Button variant="gym-ghost" size="sm">
-              <Plus className="w-4 h-4 mr-1" />
-              Add Meal
-            </Button>
           </div>
 
           <div className="space-y-3">
-            {meals.map((meal, i) => (
-              <Card key={i} variant="glass" className="hover:border-primary/30 transition-all">
+            {meals.map((meal, index) => (
+              <Card
+                key={meal.name}
+                variant="glass"
+                className={`transition-all ${
+                  meal.entries.length === 0 ? "border-dashed" : ""
+                }`}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                       <meal.icon className="w-5 h-5 text-primary" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-foreground">{meal.name}</h3>
-                        <span className="text-sm font-bold text-primary">{meal.calories} kcal</span>
+                        <div>
+                          <h3 className="font-semibold text-foreground">{meal.name}</h3>
+                          <p className="text-xs text-muted-foreground">{meal.time}</p>
+                        </div>
+                        {meal.entries.length > 0 && (
+                          <span className="text-sm font-bold text-primary">
+                            {getMealCalories(meal)} kcal
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{meal.time}</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {meal.items.join(" · ")}
-                      </p>
+
+                      {/* Entries */}
+                      {meal.entries.length > 0 && (
+                        <div className="mt-3 space-y-1.5">
+                          {meal.entries.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-center justify-between text-sm py-1 border-b border-border/30 last:border-0"
+                            >
+                              <span className="text-muted-foreground truncate flex-1">
+                                {entry.name}
+                              </span>
+                              <span className="text-foreground font-medium ml-2">
+                                {entry.calories} kcal
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add Food Button */}
+                      <Button
+                        variant="gym-ghost"
+                        size="sm"
+                        className="mt-3 h-8"
+                        onClick={() => handleAddToMeal(index)}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add Food
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
-
-            {/* Add dinner placeholder */}
-            <Card
-              variant="glass"
-              className="border-dashed hover:border-primary/50 transition-all cursor-pointer"
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                    <Pizza className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Dinner</p>
-                    <p className="text-sm">Tap to add</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
 
-      {/* FAB */}
+      {/* FAB - Search Foods */}
       <Button
         variant="fab"
         size="icon-xl"
         className="fixed bottom-24 right-4 z-50 animate-glow"
+        onClick={() => {
+          setActiveMealIndex(3); // Default to dinner
+          setShowFoodSearch(true);
+        }}
       >
-        <Plus className="w-7 h-7" />
+        <Search className="w-6 h-6" />
       </Button>
+
+      {/* Food Search Modal */}
+      <FoodSearchModal
+        isOpen={showFoodSearch}
+        onClose={() => {
+          setShowFoodSearch(false);
+          setActiveMealIndex(null);
+        }}
+        onSelectFood={handleFoodSelect}
+      />
 
       <BottomNav />
     </div>
