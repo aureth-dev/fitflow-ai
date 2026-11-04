@@ -50,7 +50,7 @@ const Profile = () => {
                 <User className="w-8 h-8 text-primary" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground">Alex Fitness</h2>
+                <h2 className="text-xl font-bold text-foreground">Khushal</h2>
                 <p className="text-sm text-muted-foreground">Member since Dec 2024</p>
                 <div className="flex items-center gap-3 mt-2">
                   <div className="flex items-center gap-1 text-primary text-sm font-semibold">
