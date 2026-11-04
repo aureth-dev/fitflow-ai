@@ -43,7 +43,7 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-foreground">
                 Fit<span className="text-primary">Verse</span>
               </h1>
-              <p className="text-sm text-muted-foreground">Friday, Dec 27</p>
+              <p className="text-sm text-muted-foreground">Wednesday , 4 Nov</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="px-3 py-1.5 rounded-full bg-primary/20 text-primary text-sm font-semibold flex items-center gap-1.5">
